@@ -9,6 +9,8 @@ const port = process.env.PORT ?? 3000
 
 app.get("/", (req: Request, res: Response) => {
   const clientIp = req.headers["x-forwarded-for"] !== undefined || req.ip
+
+  console.log(req.headers)
   if (typeof clientIp !== "string") {
     console.error(`Client IP is not a string: ${clientIp}`)
     res.send("An error occurred while trying to determine your IP address.")
