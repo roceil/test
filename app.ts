@@ -8,16 +8,25 @@ const app: Express = express()
 const port = process.env.PORT ?? 3000
 
 app.get("/", (req: Request, res: Response) => {
-  const ip = req.ip as unknown as string // 客戶端 IP 地址
+  const clientIp = req.headers["x-forwarded-for"] !== undefined || req.ip
+  if (typeof clientIp !== "string") {
+    console.error(`Client IP is not a string: ${clientIp}`)
+    res.send("An error occurred while trying to determine your IP address.")
+    return
+  }
 
-  // 執行反向 DNS 查詢
-  lookup(ip, (err, hostname) => {
+  const ip = clientIp.split(",")[0].trim() as unknown as string // 如果 'x-forwarded-for' 包含多個 IP，取第一個
+
+  lookup(ip, { verbatim: true }, (err, hostname) => {
     if (err !== null) {
-      console.log(`Reverse lookup failed for IP ${ip}: ${err.message}`)
+      console.error(`Reverse lookup failed for IP ${ip}: ${err.message}`)
       res.send(`Your IP address is ${ip}, but we couldn't determine your hostname.`)
-    } else {
+    } else if (hostname !== ip) {
       console.log(`Client IP: ${ip}, Hostname: ${hostname}`)
       res.send(`Your IP address is ${ip} and your hostname is ${hostname}`)
+    } else {
+      console.log(`Client IP: ${ip}, No hostname resolved.`)
+      res.send(`Your IP address is ${ip}, but no hostname could be resolved.`)
     }
   })
 })
